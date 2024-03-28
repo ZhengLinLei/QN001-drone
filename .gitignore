@@ -5,7 +5,7 @@ build/
 dist/
 components/idf_test/unit_test/components/lwip/lwip_test_apps/
 
-sdkconfig/
+sdkconfig
 
 components/esptool_py/esptool/flash_id.pyc
 components/espcoredump/espcoredump.pyc
