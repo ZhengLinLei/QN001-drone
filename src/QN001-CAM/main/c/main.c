@@ -12,6 +12,7 @@
 #include "base_Comm.h"
 #include "base_Buzzer.h"
 #include "base_Cmd.h"
+#include "base_Wifi.h"
 
 
 // Constants
@@ -47,8 +48,28 @@ void setup() {
     memset(ssid, '\0', 32);
     memset(password, '\0', 32);
     wait_for_wifi_command(UART_NUM_0, ssid, password);
+
+#ifdef VERBOSE                
     printf("SSID: %s\n", ssid);
     printf("Password: %s\n", password);
+#endif
+
+    // Emit wake sound
+    wake_sound(&ledc_channel);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    stop_sound(&ledc_channel);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    wake_sound(&ledc_channel);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    stop_sound(&ledc_channel);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    alarm_sound(&ledc_channel);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    stop_sound(&ledc_channel);
+
+    // Connect to WiFi
+    // wifi_connect(ssid, password);
+
 }
 
 void loop() {
@@ -56,11 +77,16 @@ void loop() {
         // Wait for wake command
         wait_for_wake_command(UART_NUM_0);
 
+        // Emit wake sound
+        wake_sound(&ledc_channel);
+
         // Turn on alarm light for 10 miliseconds
         gpio_set_level(LED_ALARM_PIN, 1);
         vTaskDelay(pdMS_TO_TICKS(1000));
         gpio_set_level(LED_ALARM_PIN, 0);
 
+        // Stop wake sound
+        stop_sound(&ledc_channel);
 
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
