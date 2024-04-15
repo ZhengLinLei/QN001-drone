@@ -20,6 +20,7 @@ typedef const char*  esp_event_base_t; /**< unique pointer to a subsystem that e
 
 #define WIFI_ESP_MAXIMUM_RETRY  2
 #define WIFI_ESP_WIFI_MODE      WIFI_MODE_STA
+#define WIFI_ESP_CONN_TIMEOUT   pdMS_TO_TICKS(10000) // 10 segundos de timeout
 
 #if CONFIG_ESP_WPA3_SAE_PWE_HUNT_AND_PECK
 #define ESP_WIFI_SAE_MODE WPA3_SAE_PWE_HUNT_AND_PECK
@@ -59,7 +60,7 @@ typedef const char*  esp_event_base_t; /**< unique pointer to a subsystem that e
  * 
  * @return void
  */
-void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
+// static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
 
 /*!
  * @brief Initialize wifi
@@ -67,8 +68,10 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id
  * @param[in] ssid SSID
  * @param[in] password Password
  * 
- * @return void
+ * @return status 0 - Ok
+ *                1 - Failed
+ *               -1 - Timeout or Error
  */
-void wifi_connect(uint8_t* ssid, uint8_t* password);
+int wifi_connect(uint8_t* ssid, uint8_t* password);
 
 #endif // __BASE_WIFI_H__

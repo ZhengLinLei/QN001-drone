@@ -6,6 +6,7 @@
 #include <driver/gpio.h>
 #include <driver/ledc.h>
 #include <esp_log.h>
+#include <nvs_flash.h>
 
 // Project headers
 #include "env.h"
@@ -27,6 +28,9 @@ void app_main();
 
 // Code
 void setup() {
+    int iRet;
+
+
     // Initialize UART communication
     init_uart(UART_NUM_0, UART_BAUDRATE, TX_PIN, RX_PIN, UART_BUFFER_SIZE, UART_BUFFER_SIZE);
 
@@ -45,31 +49,52 @@ void setup() {
 
     uint8_t* ssid = (uint8_t*) malloc(32);
     uint8_t* password = (uint8_t*) malloc(32);
-    memset(ssid, '\0', 32);
-    memset(password, '\0', 32);
-    wait_for_wifi_command(UART_NUM_0, ssid, password);
+
+    iRet = 1;
+
+    while (iRet == 1) {
+        memset(ssid, '\0', 32);
+        memset(password, '\0', 32);
+        wait_for_wifi_command(UART_NUM_0, ssid, password);
 
 #ifdef VERBOSE                
-    printf("SSID: %s\n", ssid);
-    printf("Password: %s\n", password);
+        printf("SSID: %s\n", ssid);
+        printf("Password: %s\n", password);
 #endif
 
-    // Emit wake sound
-    wake_sound(&ledc_channel);
-    vTaskDelay(pdMS_TO_TICKS(100));
-    stop_sound(&ledc_channel);
-    vTaskDelay(pdMS_TO_TICKS(100));
-    wake_sound(&ledc_channel);
-    vTaskDelay(pdMS_TO_TICKS(100));
-    stop_sound(&ledc_channel);
+        // Emit wake sound
+        wake_sound(&ledc_channel);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        stop_sound(&ledc_channel);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        wake_sound(&ledc_channel);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        stop_sound(&ledc_channel);
+        // vTaskDelay(pdMS_TO_TICKS(100));
+        // alarm_sound(&ledc_channel);
+        // vTaskDelay(pdMS_TO_TICKS(100));
+        // stop_sound(&ledc_channel);
+
+        // Connect to WiFi
+        iRet = wifi_connect(ssid, password);
+
+        if (iRet == 1) {
+            send_uart(UART_NUM_0, "1", 1);
+        }
+    }
+
+    if (iRet == -1) {
+        send_uart(UART_NUM_0, "2", 1);
+
+        // Reset
+        esp_restart();
+    }
+
+    send_uart(UART_NUM_0, "0", 1);
     vTaskDelay(pdMS_TO_TICKS(100));
     alarm_sound(&ledc_channel);
     vTaskDelay(pdMS_TO_TICKS(100));
     stop_sound(&ledc_channel);
-
-    // Connect to WiFi
-    // wifi_connect(ssid, password);
-
 }
 
 void loop() {
@@ -94,7 +119,7 @@ void loop() {
 
 void app_main() {
     esp_log_level_set("*", ESP_LOG_NONE);
-
+    nvs_flash_init();
     setup();
     loop();
 }

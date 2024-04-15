@@ -74,14 +74,14 @@ int wait_for_wifi_command(uart_port_t uart_num, uint8_t* ssid, uint8_t* password
                 tok = (uint8_t *) strtok(NULL, ";");
                 memcpy(password, tok, strlen((const char *)tok));
 
-                send_uart(uart_num, "0", 2);
+                send_uart(uart_num, "0", 1);
 
                 // Free memory
                 free_base_cmd(&cmd);
 
                 return 0;
             } else {
-                send_uart(uart_num, "1", 2);
+                send_uart(uart_num, "1", 1);
             }
         } // End if
     } // End while
