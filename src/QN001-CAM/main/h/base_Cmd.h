@@ -6,7 +6,7 @@
  *          Command:
  *              CCCCNNNNNNMMMMMMM..{N times}
  *              CCCC - Command code
- *              NNNN - Command length {Not used for code 0001 and 0002}
+ *              NNNNNN - Command length {Not used for code 0001 and 0002}
  * 
  *          Reponse:
  *              0    - OK
@@ -65,11 +65,15 @@ void parse_base_cmd(base_cmd_t* cmd, uint8_t* data);
 // Command codes
 
 #define CODE_WIFI           "0000"   // 0000000022test_wifi;password123;
-#define CODE_WAKEUP         "0001"   // 0001
-#define CODE_END            "0002"
-#define CODE_SERVER         "0003"
+#define CODE_WAKEUP         "0001"   // 00010000040;0;
+#define CODE_END            "0002"   // 0002
+#define CODE_SERVER         "0003"   // 0003000014google.com;80;
 
+/*
+    Example code
 
+    0000000037JM_limpia_el_baño;LaTienesEnElRouter;
+*/
 
 
 
@@ -95,10 +99,26 @@ int wait_for_wifi_command(uart_port_t uart_num, uint8_t* ssid, uint8_t* password
  * @brief Wait for wake up command
  * 
  * @param[in] uart_num UART number
+ * @param[out] dic Device identification code
+ * @param[out] key Key
  * 
  * @return 0 if success, 1 if error
 */
-int wait_for_wake_command(uart_port_t uart_num);
+int wait_for_wake_command(uart_port_t uart_num, uint8_t* dic, uint8_t* key);
+
+/*!
+ * @brief Wait for server command
+ * 
+ * @param[in] uart_num UART number
+ * @param[out] server Server
+ * @param[out] port Port
+ * @param[out] intval Interval
+ * 
+ * @return 0 if success, 1 if error
+*/
+int wait_for_server_command(uart_port_t uart_num, uint8_t* server, int* port, int* intval);
+
+
 
 
 #endif // __BASE_CMD_H__

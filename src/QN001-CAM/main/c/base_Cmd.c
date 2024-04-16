@@ -50,6 +50,10 @@ int wait_for_wifi_command(uart_port_t uart_num, uint8_t* ssid, uint8_t* password
     while (1) {
         // Receive data
         i = receive_uart(uart_num, cmd.code, CMD_CODE_SIZE, pdMS_TO_TICKS(1000));
+        if (i != CMD_CODE_SIZE && i != 0) {
+            send_uart(uart_num, "1", 1);
+            continue;
+        }
         
         // Check if wake command is received
         if (i > 0) {            
@@ -57,8 +61,17 @@ int wait_for_wifi_command(uart_port_t uart_num, uint8_t* ssid, uint8_t* password
             if (strcmp((const char *)cmd.code, CODE_WIFI) == 0) {
                 // Receive length
                 i = receive_uart(uart_num, cmd.length, CMD_LENGTH_SIZE, pdMS_TO_TICKS(1000));
+                if (i != CMD_LENGTH_SIZE && i != 0) {
+                    send_uart(uart_num, "1", 1);
+                    continue;
+                }
+
                 // Receive data
                 i = receive_uart(uart_num, cmd.data, atoi((char *)cmd.length), pdMS_TO_TICKS(1000));
+                if (i != atoi((char *)cmd.length) && i != 0) {
+                    send_uart(uart_num, "1", 1);
+                    continue;
+                }
 
 #ifdef VERBOSE                
                 // Print received data
@@ -74,24 +87,31 @@ int wait_for_wifi_command(uart_port_t uart_num, uint8_t* ssid, uint8_t* password
                 tok = (uint8_t *) strtok(NULL, ";");
                 memcpy(password, tok, strlen((const char *)tok));
 
-                send_uart(uart_num, "0", 2);
+                send_uart(uart_num, "0", 1);
 
                 // Free memory
                 free_base_cmd(&cmd);
 
                 return 0;
+            } 
+            else if (strcmp((const char *)cmd.code, CODE_END) == 0) {
+                // Free memory
+                free_base_cmd(&cmd);
+
+                return -1;
             } else {
-                send_uart(uart_num, "1", 2);
+                send_uart(uart_num, "1", 1);
             }
         } // End if
     } // End while
     return 0;
 } 
 
-int wait_for_wake_command(uart_port_t uart_num) 
+int wait_for_wake_command(uart_port_t uart_num, uint8_t* dic, uint8_t* key) 
 {
     base_cmd_t cmd;
     int i;
+    uint8_t* tok;
     // Init
     init_base_cmd(&cmd);
     reset_base_cmd(&cmd);
@@ -99,18 +119,54 @@ int wait_for_wake_command(uart_port_t uart_num)
     while (1) {
         // Receive data
         i = receive_uart(uart_num, cmd.code, CMD_CODE_SIZE, pdMS_TO_TICKS(1000));
+        if (i != CMD_CODE_SIZE && i != 0) {
+            send_uart(uart_num, "1", 1);
+            continue;
+        }
         
-        // Check if wake command is received
+        // Check if server command is received
         if (i > 0) {            
-            // Check if wake command is received
             if (strcmp((const char *)cmd.code, CODE_WAKEUP) == 0) {
+                // Receive length
+                i = receive_uart(uart_num, cmd.length, CMD_LENGTH_SIZE, pdMS_TO_TICKS(1000));
+                if (i != CMD_LENGTH_SIZE && i != 0) {
+                    send_uart(uart_num, "1", 1);
+                    continue;
+                }
 
-                send_uart(uart_num, "0", 1);
+                // Receive data
+                i = receive_uart(uart_num, cmd.data, atoi((char *)cmd.length), pdMS_TO_TICKS(1000));
+                if (i != atoi((char *)cmd.length) && i != 0) {
+                    send_uart(uart_num, "1", 1);
+                    continue;
+                }
+
+#ifdef VERBOSE                
+                // Print received data
+                printf("Code: %s\n", cmd.code);
+                printf("Length: %s\n", cmd.length);
+                printf("Data: %s\n", cmd.data);
+#endif
+
+                // Parse data
+                tok = (uint8_t *) strtok((char *)cmd.data, ";");
+                memcpy(dic, tok, strlen((const char *)tok));
+
+                tok = (uint8_t *) strtok(NULL, ";");
+                memcpy(key, tok, strlen((const char *)tok));
 
                 // Free memory
                 free_base_cmd(&cmd);
 
+                send_uart(uart_num, "0", 1);
+
                 return 0;
+            } 
+            else if (strcmp((const char *)cmd.code, CODE_END) == 0) {
+                // Free memory
+                free_base_cmd(&cmd);
+
+                return -1;
             } else {
                 send_uart(uart_num, "1", 1);
             }
@@ -118,3 +174,74 @@ int wait_for_wake_command(uart_port_t uart_num)
     } // End while
     return 0;
 }
+
+int wait_for_server_command(uart_port_t uart_num, uint8_t* server, int* port, int* intval) 
+{
+    base_cmd_t cmd;
+    int i;
+    uint8_t* tok;
+    // Init
+    init_base_cmd(&cmd);
+    reset_base_cmd(&cmd);
+    // Enter sleep mode until wake command is received
+    while (1) {
+        // Receive data
+        i = receive_uart(uart_num, cmd.code, CMD_CODE_SIZE, pdMS_TO_TICKS(1000));
+        if (i != CMD_CODE_SIZE && i != 0) {
+            send_uart(uart_num, "1", 1);
+            continue;
+        }
+        
+        // Check if server command is received
+        if (i > 0) {            
+            if (strcmp((const char *)cmd.code, CODE_SERVER) == 0) {
+                // Receive length
+                i = receive_uart(uart_num, cmd.length, CMD_LENGTH_SIZE, pdMS_TO_TICKS(1000));
+                if (i != CMD_LENGTH_SIZE && i != 0) {
+                    send_uart(uart_num, "1", 1);
+                    continue;
+                }
+
+                // Receive data
+                i = receive_uart(uart_num, cmd.data, atoi((char *)cmd.length), pdMS_TO_TICKS(1000));
+                if (i != atoi((char *)cmd.length) && i != 0) {
+                    send_uart(uart_num, "1", 1);
+                    continue;
+                }
+
+#ifdef VERBOSE                
+                // Print received data
+                printf("Code: %s\n", cmd.code);
+                printf("Length: %s\n", cmd.length);
+                printf("Data: %s\n", cmd.data);
+#endif
+
+                // Parse data
+                tok = (uint8_t *) strtok((char *)cmd.data, ";");
+                memcpy(server, tok, strlen((const char *)tok));
+
+                tok = (uint8_t *) strtok(NULL, ";");
+                *port = atoi((char *)tok);
+
+                tok = (uint8_t *) strtok(NULL, ";");
+                *intval = atoi((char *)tok);
+
+                send_uart(uart_num, "0", 1);
+
+                // Free memory
+                free_base_cmd(&cmd);
+
+                return 0;
+            } 
+            else if (strcmp((const char *)cmd.code, CODE_END) == 0) {
+                // Free memory
+                free_base_cmd(&cmd);
+
+                return -1;
+            } else {
+                send_uart(uart_num, "1", 1);
+            }
+        } // End if
+    } // End while
+    return 0;
+} 

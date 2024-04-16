@@ -16,4 +16,49 @@
 */
 void init_buzzer(int buzzer_pin, int freq, ledc_channel_config_t* ledc_channel);
 
+/*!
+ * @brief Emit wake sound
+ * 
+ * @param[in] ledc_channel LEDC channel configuration
+ * 
+ * @return void
+*/
+void wake_sound(ledc_channel_config_t* ledc_channel);
+
+/*!
+ * @brief Emit alarm sound
+ * 
+ * @param[in] ledc_channel LEDC channel configuration
+ * 
+ * @return void
+*/
+void alarm_sound(ledc_channel_config_t* ledc_channel);
+
+/*!
+* @brief Emit error sound
+* 
+* @param[in] ledc_channel LEDC channel configuration
+* 
+* @return void
+*/
+void error_sound(ledc_channel_config_t* ledc_channel);
+
+/*!
+ * @brief Shutdown sound
+ * 
+ * @param[in] ledc_channel LEDC channel configuration
+ * 
+ * @return void
+*/
+void shutdown_sound(ledc_channel_config_t* ledc_channel);
+
+/*!
+ * @brief Stop sound
+ * 
+ * @param[in] ledc_channel LEDC channel configuration
+ * 
+ * @return void
+*/
+void stop_sound(ledc_channel_config_t* ledc_channel);
+
 #endif // __BASE_BUZZER_H__
