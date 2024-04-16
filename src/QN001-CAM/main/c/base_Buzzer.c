@@ -50,6 +50,37 @@ void alarm_sound(ledc_channel_config_t *ledc_channel)
     ledc_update_duty(ledc_channel->speed_mode, ledc_channel->channel);
 }
 
+void error_sound(ledc_channel_config_t *ledc_channel)
+{
+    ledc_set_duty(ledc_channel->speed_mode, ledc_channel->channel, 512);
+    ledc_update_duty(ledc_channel->speed_mode, ledc_channel->channel);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    stop_sound(ledc_channel);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    ledc_set_duty(ledc_channel->speed_mode, ledc_channel->channel, 2012);
+    ledc_update_duty(ledc_channel->speed_mode, ledc_channel->channel);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    stop_sound(ledc_channel);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    ledc_set_duty(ledc_channel->speed_mode, ledc_channel->channel, 512);
+    ledc_update_duty(ledc_channel->speed_mode, ledc_channel->channel);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    stop_sound(ledc_channel);
+}
+
+void shutdown_sound(ledc_channel_config_t *ledc_channel)
+{
+    ledc_set_duty(ledc_channel->speed_mode, ledc_channel->channel, 312);
+    ledc_update_duty(ledc_channel->speed_mode, ledc_channel->channel);
+    vTaskDelay(pdMS_TO_TICKS(400));
+    stop_sound(ledc_channel);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    ledc_set_duty(ledc_channel->speed_mode, ledc_channel->channel, 2012);
+    ledc_update_duty(ledc_channel->speed_mode, ledc_channel->channel);
+    vTaskDelay(pdMS_TO_TICKS(400));
+    stop_sound(ledc_channel);
+}
+
 void stop_sound(ledc_channel_config_t *ledc_channel)
 {
     ledc_set_duty(ledc_channel->speed_mode, ledc_channel->channel, 0);

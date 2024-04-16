@@ -18,9 +18,9 @@ typedef const char*  esp_event_base_t; /**< unique pointer to a subsystem that e
 #define EXAMPLE_ESP_WIFI_PASS      ""
 
 
-#define WIFI_ESP_MAXIMUM_RETRY  2
-#define WIFI_ESP_WIFI_MODE      WIFI_MODE_STA
-#define WIFI_ESP_CONN_TIMEOUT   pdMS_TO_TICKS(10000) // 10 segundos de timeout
+#define WIFI_ESP_MAXIMUM_RETRY      5
+#define WIFI_ESP_WIFI_MODE          WIFI_MODE_STA
+#define WIFI_ESP_CONN_TIMEOUT       portMAX_DELAY //pdMS_TO_TICKS(10000)
 
 #if CONFIG_ESP_WPA3_SAE_PWE_HUNT_AND_PECK
 #define ESP_WIFI_SAE_MODE WPA3_SAE_PWE_HUNT_AND_PECK
