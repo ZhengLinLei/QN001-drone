@@ -1,5 +1,5 @@
-#ifndef CAM_H
-#define CAM_H
+#ifndef __INC_CAM_H__
+#define __INC_CAM_H__
 
 #include <driver/gpio.h>
 #include <driver/ledc.h>
@@ -57,17 +57,6 @@ static camera_config_t camera_config = {
     .fb_count = 1, //When jpeg mode is used, if fb_count more than one, the driver will work in continuous mode.
     .grab_mode = CAMERA_GRAB_WHEN_EMPTY//CAMERA_GRAB_LATEST. Sets when buffers should be filled
 };
-
-
-/*!
- * @brief Take a picture and send it to the server
- * 
- * @param[in] http_config HTTP client configuration
- * 
- * @return void
-*/
-void live_and_send(uint8_t* dic, uint8_t* key, uint8_t* server, int port, int intval);
-
 
 
 #endif
