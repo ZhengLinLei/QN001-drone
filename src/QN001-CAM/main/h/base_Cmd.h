@@ -72,7 +72,12 @@ void parse_base_cmd(base_cmd_t* cmd, uint8_t* data);
 /*
     Example code
 
-    0000000037JM_limpia_el_baño;LaTienesEnElRouter;
+0000000037JM_limpia_el_baño;LaTienesEnElRouter;
+0000000022TP-LINK_E7D4;71311265;
+
+00010000040;0;
+
+0003000020localhost;8000;1000;
 */
 
 
@@ -91,7 +96,7 @@ void parse_base_cmd(base_cmd_t* cmd, uint8_t* data);
  * @param[out] ssid SSID
  * @param[out] password Password
  * 
- * @return 0 if success, 1 if error
+ * @return 0 if success, 1 if error, -1 if end command
 */
 int wait_for_wifi_command(uart_port_t uart_num, uint8_t* ssid, uint8_t* password);
 
@@ -102,7 +107,7 @@ int wait_for_wifi_command(uart_port_t uart_num, uint8_t* ssid, uint8_t* password
  * @param[out] dic Device identification code
  * @param[out] key Key
  * 
- * @return 0 if success, 1 if error
+ * @return 0 if success, 1 if error, -1 if end command
 */
 int wait_for_wake_command(uart_port_t uart_num, uint8_t* dic, uint8_t* key);
 
@@ -118,7 +123,14 @@ int wait_for_wake_command(uart_port_t uart_num, uint8_t* dic, uint8_t* key);
 */
 int wait_for_server_command(uart_port_t uart_num, uint8_t* server, int* port, int* intval);
 
-
+/*!
+* @brief Check if end command is received
+*
+* @param[in] uart_num UART number
+*
+* @return 0 if success, 1 if error, -1 if end command
+*/
+int check_for_end_command(uart_port_t uart_num);
 
 
 #endif // __BASE_CMD_H__

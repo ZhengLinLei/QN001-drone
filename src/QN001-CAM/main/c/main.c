@@ -16,7 +16,8 @@
 #include "base_Buzzer.h"
 #include "base_Cmd.h"
 #include "base_Wifi.h"
-#include "base_Cam.h"
+#include "include_Cam.h"
+#include "server_Util.h"
 
 
 // Constants
@@ -58,17 +59,7 @@ void setup() {
     iRet = wait_for_wifi_command(UART_NUM_0, ssid, password);
 
     if (iRet == -1) {
-        // Send 0x02 if iRet == -1
-        send_uart(UART_NUM_0, "2", 1);
-
-        vTaskDelay(pdMS_TO_TICKS(100));
-        shutdown_sound(&ledc_channel);
-        vTaskDelay(pdMS_TO_TICKS(100));
-        stop_sound(&ledc_channel);
-
-        vTaskDelay(pdMS_TO_TICKS(200));
-        // Reset
-        esp_restart();
+        exit_t(ledc_channel);
     }
 
 #ifdef VERBOSE                
@@ -84,26 +75,12 @@ void setup() {
     wake_sound(&ledc_channel);
     vTaskDelay(pdMS_TO_TICKS(100));
     stop_sound(&ledc_channel);
-    // vTaskDelay(pdMS_TO_TICKS(100));
-    // alarm_sound(&ledc_channel);
-    // vTaskDelay(pdMS_TO_TICKS(100));
-    // stop_sound(&ledc_channel);
 
     // Connect to WiFi
     iRet = wifi_connect(ssid, password);
 
     if (iRet == 1 || iRet == -1) {
-        // Send 0x01 if iRet == 1, 0x02 if iRet == -1
-        send_uart(UART_NUM_0, "2", 1);
-
-        vTaskDelay(pdMS_TO_TICKS(100));
-        error_sound(&ledc_channel);
-        vTaskDelay(pdMS_TO_TICKS(100));
-        stop_sound(&ledc_channel);
-
-        vTaskDelay(pdMS_TO_TICKS(200));
-        // Reset
-        esp_restart();
+        exit_t(ledc_channel);
     }
 
     send_uart(UART_NUM_0, "0", 1);
@@ -117,26 +94,16 @@ void loop() {
     int iRet;
 
     while (1) {
-        uint8_t* dic = (uint8_t*) malloc(32);
-        uint8_t* key = (uint8_t*) malloc(32);
+        uint8_t* dic = (uint8_t*) malloc(64);
+        uint8_t* key = (uint8_t*) malloc(64);
 
-        memset(dic, '\0', 32);
-        memset(key, '\0', 32);
+        memset(dic, '\0', 64);
+        memset(key, '\0', 64);
         // Wait for wake command
         iRet = wait_for_wake_command(UART_NUM_0, dic, key);
 
         if (iRet == -1) {
-            // Send 0x02 if iRet == -1
-            send_uart(UART_NUM_0, "2", 1);
-
-            vTaskDelay(pdMS_TO_TICKS(100));
-            shutdown_sound(&ledc_channel);
-            vTaskDelay(pdMS_TO_TICKS(100));
-            stop_sound(&ledc_channel);
-
-            vTaskDelay(pdMS_TO_TICKS(200));
-            // Reset
-            esp_restart();
+            exit_t(ledc_channel);
         }
 
         uint8_t* server = (uint8_t*) malloc(56);
@@ -148,17 +115,7 @@ void loop() {
         iRet = wait_for_server_command(UART_NUM_0, server, &port, &intval);
 
         if (iRet == -1) {
-            // Send 0x02 if iRet == -1
-            send_uart(UART_NUM_0, "2", 1);
-
-            vTaskDelay(pdMS_TO_TICKS(100));
-            shutdown_sound(&ledc_channel);
-            vTaskDelay(pdMS_TO_TICKS(100));
-            stop_sound(&ledc_channel);
-
-            vTaskDelay(pdMS_TO_TICKS(200));
-            // Reset
-            esp_restart();
+            exit_t(ledc_channel);
         }
 
         // Configuración del cliente HTTP
@@ -185,8 +142,85 @@ void loop() {
         vTaskDelay(pdMS_TO_TICKS(1000));
 
 
-        // Start sending data to server
-        take_pic_and_send(dic, key, server, port, intval);
+        // -----------------------------
+        // Concatenate server and port
+        uint8_t* url = (uint8_t*) malloc(64);
+        uint8_t* auth = (uint8_t*) malloc(64);
+        memset(url, '\0', 64);
+        memset(auth, '\0', 64);
+        sprintf((char*) url, "http://%s:%d/%s", server, port, dic);
+        sprintf((char*) auth, "Bearer %s", key);
+
+        esp_http_client_config_t http_config = {
+            .url = (char*) url,
+            .method = HTTP_METHOD_POST,
+        };
+        // -----------------------------
+        // Initialize the camera
+        esp_err_t err = esp_camera_init(&camera_config);
+        if (err != ESP_OK) {
+#ifdef VERBOSE
+            printf("Error activating camera\n");
+#endif
+            exit_t(ledc_channel);
+        }
+
+#ifdef VERBOSE
+        printf("Camera activated\n");
+#endif
+        while (1) {
+            // Check if need to stop
+            iRet = check_for_end_command(UART_NUM_0);
+
+            if (iRet == -1) {
+                exit_t(ledc_channel);
+            }
+#ifdef VERBOSE
+            printf("Taking picture\n");
+#endif
+
+            // Take pic and send
+            camera_fb_t *fb = esp_camera_fb_get();
+            if (!fb) {
+#ifdef VERBOSE
+                printf("Error taking picture\n");
+#endif
+
+                return;
+            }
+
+ #ifdef VERBOSE
+            printf("Picture taken. Length: %d\n", fb->len);
+#endif
+
+            // Send to server
+            esp_http_client_handle_t http_client = esp_http_client_init(&http_config);
+
+            // Set necessary HTTP headers Content-Type and Authorization with Bearer token
+            esp_http_client_set_header(http_client, "Content-Type", "image/jpeg");
+            esp_http_client_set_header(http_client, "Authorization", (const char*) auth);
+
+            esp_http_client_open(http_client, fb->len);
+            esp_http_client_write(http_client, (const char *)fb->buf, fb->len);
+
+            // Read response
+            int content_length = esp_http_client_fetch_headers(http_client);
+            char* response = (char*) malloc(content_length + 1);
+            esp_http_client_read(http_client, response, content_length);
+            response[content_length] = '\0';
+
+#ifdef VERBOSE
+            printf("Response: %s\n", response);
+#endif
+
+            // Clean
+            esp_http_client_cleanup(http_client);
+            esp_camera_fb_return(fb);
+
+
+            // ms to ticks
+            vTaskDelay(pdMS_TO_TICKS(intval));
+        }
 
 
 
