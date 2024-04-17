@@ -74,6 +74,7 @@ void parse_base_cmd(base_cmd_t* cmd, uint8_t* data);
 
 0000000037JM_limpia_el_baño;LaTienesEnElRouter;
 0000000022TP-LINK_E7D4;71311265;
+0000000019iPhone;tengohambre;
 
 00010000040;0;
 

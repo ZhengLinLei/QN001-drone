@@ -155,10 +155,36 @@ void loop() {
             .url = (char*) url,
             .method = HTTP_METHOD_POST,
         };
+
+#ifdef VERBOSE
+        printf("URL: %s\n", url);
+        printf("Auth: %s\n", auth);
+#endif
+
         // -----------------------------
         // Initialize the camera
+        // if PSRAM IC present, init with UXGA resolution and higher JPEG quality
+        //                      for larger pre-allocated frame buffer.
+        if(camera_config.pixel_format == PIXFORMAT_JPEG){
+            if(psramFound()){
+                camera_config.jpeg_quality = 10;
+                camera_config.fb_count = 2;
+                camera_config.grab_mode = CAMERA_GRAB_LATEST;
+            } else {
+                // Limit the frame size when PSRAM is not available
+                camera_config.frame_size = FRAMESIZE_SVGA;
+                camera_config.fb_location = CAMERA_FB_IN_DRAM;
+            }
+        } else {
+            // Best option for face detection/recognition
+            camera_config.frame_size = FRAMESIZE_240X240;
+#if CONFIG_IDF_TARGET_ESP32S3
+            camera_config.fb_count = 2;
+#endif
+        }
         esp_err_t err = esp_camera_init(&camera_config);
         if (err != ESP_OK) {
+
 #ifdef VERBOSE
             printf("Error activating camera\n");
 #endif
