@@ -143,18 +143,18 @@ void loop() {
 
 
         // -----------------------------
-        esp_http_client_config_t http_config = {
-            .url = "",
-            .method = HTTP_METHOD_POST,
-        };
         // Concatenate server and port
-        char* url = (char*) malloc(64);
-        char* auth = (char*) malloc(64);
+        uint8_t* url = (uint8_t*) malloc(64);
+        uint8_t* auth = (uint8_t*) malloc(64);
         memset(url, '\0', 64);
         memset(auth, '\0', 64);
-        sprintf(url, "http://%s:%d/%s", server, port, dic);
-        sprintf(auth, "Bearer %s", key);
-        strcpy((char*)http_config.url, url);
+        sprintf((char*) url, "http://%s:%d/%s", server, port, dic);
+        sprintf((char*) auth, "Bearer %s", key);
+
+        esp_http_client_config_t http_config = {
+            .url = (char*) url,
+            .method = HTTP_METHOD_POST,
+        };
         // -----------------------------
         // Initialize the camera
         esp_err_t err = esp_camera_init(&camera_config);
@@ -164,13 +164,20 @@ void loop() {
 #endif
             exit_t(ledc_channel);
         }
+
+#ifdef VERBOSE
+        printf("Camera activated\n");
+#endif
         while (1) {
             // Check if need to stop
             iRet = check_for_end_command(UART_NUM_0);
 
-            if (iRet == 0) {
+            if (iRet == -1) {
                 exit_t(ledc_channel);
             }
+#ifdef VERBOSE
+            printf("Taking picture\n");
+#endif
 
             // Take pic and send
             camera_fb_t *fb = esp_camera_fb_get();
@@ -182,15 +189,29 @@ void loop() {
                 return;
             }
 
+ #ifdef VERBOSE
+            printf("Picture taken. Length: %d\n", fb->len);
+#endif
+
             // Send to server
             esp_http_client_handle_t http_client = esp_http_client_init(&http_config);
 
             // Set necessary HTTP headers Content-Type and Authorization with Bearer token
             esp_http_client_set_header(http_client, "Content-Type", "image/jpeg");
-            esp_http_client_set_header(http_client, "Authorization", auth);
+            esp_http_client_set_header(http_client, "Authorization", (const char*) auth);
 
             esp_http_client_open(http_client, fb->len);
             esp_http_client_write(http_client, (const char *)fb->buf, fb->len);
+
+            // Read response
+            int content_length = esp_http_client_fetch_headers(http_client);
+            char* response = (char*) malloc(content_length + 1);
+            esp_http_client_read(http_client, response, content_length);
+            response[content_length] = '\0';
+
+#ifdef VERBOSE
+            printf("Response: %s\n", response);
+#endif
 
             // Clean
             esp_http_client_cleanup(http_client);

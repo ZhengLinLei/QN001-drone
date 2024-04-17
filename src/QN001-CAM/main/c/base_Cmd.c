@@ -254,26 +254,23 @@ int check_for_end_command(uart_port_t uart_num)
     // Init
     init_base_cmd(&cmd);
     reset_base_cmd(&cmd);
-    // Enter sleep mode until wake command is received
-    while (1) {
-        // Receive data
-        i = receive_uart(uart_num, cmd.code, CMD_CODE_SIZE, pdMS_TO_TICKS(1000));
-        if (i != CMD_CODE_SIZE && i != 0) {
-            send_uart(uart_num, "1", 1);
-            continue;
-        }
+    // Receive data
+    i = receive_uart(uart_num, cmd.code, CMD_CODE_SIZE, pdMS_TO_TICKS(1000));
+    if (i != CMD_CODE_SIZE && i != 0) {
+        send_uart(uart_num, "1", 1);
+        return 1;
+    }
         
-        // Check if server command is received
-        if (i > 0) {            
-            if (strcmp((const char *)cmd.code, CODE_END) == 0) {
-                // Free memory
-                free_base_cmd(&cmd);
+    // Check if server command is received
+    if (i > 0) {            
+        if (strcmp((const char *)cmd.code, CODE_END) == 0) {
+            // Free memory
+            free_base_cmd(&cmd);
 
-                return -1;
-            } else {
-                send_uart(uart_num, "1", 1);
-            }
-        } // End if
-    } // End while
+            return -1;
+        } else {
+            send_uart(uart_num, "1", 1);
+        }
+    } // End if
     return 0;
 }

@@ -72,7 +72,12 @@ void parse_base_cmd(base_cmd_t* cmd, uint8_t* data);
 /*
     Example code
 
-    0000000037JM_limpia_el_baño;LaTienesEnElRouter;
+0000000037JM_limpia_el_baño;LaTienesEnElRouter;
+0000000022TP-LINK_E7D4;71311265;
+
+00010000040;0;
+
+0003000020localhost;8000;1000;
 */
 
 
