@@ -1,6 +1,8 @@
 .vscode
 .DS_Store
 
+tmp/
+
 build/
 dist/
 components/idf_test/unit_test/components/lwip/lwip_test_apps/

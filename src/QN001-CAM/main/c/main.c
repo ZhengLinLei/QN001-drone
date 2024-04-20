@@ -9,6 +9,7 @@
 #include <nvs_flash.h>
 #include <esp_system.h>
 #include <esp_http_client.h>
+#include <esp_psram.h>
 
 // Project headers
 #include "env.h"
@@ -91,7 +92,7 @@ void setup() {
 }
 
 void loop() {
-    int iRet;
+    int iRet, tryCap = 0, trySend = 0;
 
     while (1) {
         uint8_t* dic = (uint8_t*) malloc(64);
@@ -155,10 +156,36 @@ void loop() {
             .url = (char*) url,
             .method = HTTP_METHOD_POST,
         };
+
+#ifdef VERBOSE
+        printf("URL: %s\n", url);
+        printf("Auth: %s\n", auth);
+#endif
+
         // -----------------------------
         // Initialize the camera
+        // if PSRAM IC present, init with UXGA resolution and higher JPEG quality
+        //                      for larger pre-allocated frame buffer.
+        if(camera_config.pixel_format == PIXFORMAT_JPEG){
+            if(esp_psram_get_size() > 0){
+                camera_config.jpeg_quality = 10;
+                camera_config.fb_count = 2;
+                camera_config.grab_mode = CAMERA_GRAB_LATEST;
+            } else {
+                // Limit the frame size when PSRAM is not available
+                camera_config.frame_size = FRAMESIZE_SVGA;
+                camera_config.fb_location = CAMERA_FB_IN_DRAM;
+            }
+        } else {
+            // Best option for face detection/recognition
+            camera_config.frame_size = FRAMESIZE_240X240;
+#if CONFIG_IDF_TARGET_ESP32S3
+            camera_config.fb_count = 2;
+#endif
+        }
         esp_err_t err = esp_camera_init(&camera_config);
         if (err != ESP_OK) {
+
 #ifdef VERBOSE
             printf("Error activating camera\n");
 #endif
@@ -185,33 +212,80 @@ void loop() {
 #ifdef VERBOSE
                 printf("Error taking picture\n");
 #endif
-
-                return;
+                if (tryCap >= 5) {
+                    exit_t(ledc_channel);
+                }
+                
+                tryCap++;
+                continue;
             }
 
  #ifdef VERBOSE
             printf("Picture taken. Length: %d\n", fb->len);
 #endif
 
-            // Send to server
+
+            // Send to server using HTTP POST
             esp_http_client_handle_t http_client = esp_http_client_init(&http_config);
+
+            char jpegSizeStr[7] = "";
+            snprintf(jpegSizeStr, sizeof(jpegSizeStr), "%d", fb->len);
+
 
             // Set necessary HTTP headers Content-Type and Authorization with Bearer token
             esp_http_client_set_header(http_client, "Content-Type", "image/jpeg");
             esp_http_client_set_header(http_client, "Authorization", (const char*) auth);
-
-            esp_http_client_open(http_client, fb->len);
-            esp_http_client_write(http_client, (const char *)fb->buf, fb->len);
-
-            // Read response
-            int content_length = esp_http_client_fetch_headers(http_client);
-            char* response = (char*) malloc(content_length + 1);
-            esp_http_client_read(http_client, response, content_length);
-            response[content_length] = '\0';
+            esp_http_client_set_header(http_client, "Content-Length", (const char*) jpegSizeStr);
 
 #ifdef VERBOSE
-            printf("Response: %s\n", response);
+            printf("Sending picture\n");
 #endif
+
+            // esp_http_client_open(http_client, fb->len);
+            esp_http_client_set_method(http_client, HTTP_METHOD_POST);
+            // esp_http_client_write(http_client, (const char *)fb->buf, fb->len);
+            esp_http_client_set_post_field(http_client, (const char *)fb->buf, fb->len);
+            esp_err_t result = esp_http_client_perform(http_client);
+
+            if (result != ESP_OK) {
+#ifdef VERBOSE
+    printf("Error sending picture: %s\n", esp_err_to_name(result));
+#endif
+                if (trySend >= 5) {
+                    exit_t(ledc_channel);
+                }
+                
+                trySend++;
+                continue;
+            } 
+            
+#ifdef VERBOSE
+            else {
+                printf("Picture sent\n");
+            }
+#endif
+
+#ifdef VERBOSE
+            printf("Picture sent\n");
+#endif
+
+            // Read response 
+            // if http code 201 nothing to do
+            // if http code 200 buzzer alarm
+
+            int http_code = esp_http_client_get_status_code(http_client);
+#ifdef VERBOSE
+                printf("HTTP Status = %d\n", http_code);
+#endif
+            if (http_code == 200) {
+                // Emit alarm sound 5 times
+                for (int i = 0; i < 5; i++) {
+                    alarm_sound(&ledc_channel);
+                    vTaskDelay(pdMS_TO_TICKS(50));
+                    stop_sound(&ledc_channel);
+                    vTaskDelay(pdMS_TO_TICKS(50));
+                }
+            }
 
             // Clean
             esp_http_client_cleanup(http_client);
@@ -223,11 +297,14 @@ void loop() {
         }
 
 
-
+        // Deinit camera
+        esp_camera_deinit();
         //!TODO Remmber to free memory: dic, key, server
         free(dic);
         free(key);
         free(server);
+        free(url);
+        free(auth);
     }
 }
 
