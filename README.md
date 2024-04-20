@@ -24,3 +24,8 @@
 <hr>
 
 ## Table of Contents
+
+- [Introduction](#introduction)
+- [Features](#features)
+- [User Guide](#user-guide)
+- [Installation](#installation)
