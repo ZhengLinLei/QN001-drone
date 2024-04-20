@@ -75,10 +75,11 @@ void parse_base_cmd(base_cmd_t* cmd, uint8_t* data);
 0000000037JM_limpia_el_baño;LaTienesEnElRouter;
 0000000022TP-LINK_E7D4;71311265;
 0000000019iPhone;tengohambre;
+0000000021H3601P_8DB3;7HGAu4QH;
 
 00010000040;0;
 
-0003000020localhost;8000;1000;
+0003000022192.168.1.9;8000;1000;
 */
 
 
