@@ -134,13 +134,14 @@ void loop() {
 
         // Turn on alarm light for 10 miliseconds
         gpio_set_level(LED_ALARM_PIN, 1);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        gpio_set_level(LED_ALARM_PIN, 0);
+        vTaskDelay(pdMS_TO_TICKS(100));
 
         // Stop wake sound
         stop_sound(&ledc_channel);
 
         vTaskDelay(pdMS_TO_TICKS(1000));
+        gpio_set_level(LED_ALARM_PIN, 0);
+
 
 
         // -----------------------------
@@ -195,6 +196,8 @@ void loop() {
 #ifdef VERBOSE
         printf("Camera activated\n");
 #endif
+        // Turn on flashlight
+        gpio_set_level(LED_LIGHT_PIN, 1);
         while (1) {
             // Check if need to stop
             iRet = check_for_end_command(UART_NUM_0);
@@ -295,7 +298,7 @@ void loop() {
             // ms to ticks
             vTaskDelay(pdMS_TO_TICKS(intval));
         }
-
+        gpio_set_level(LED_LIGHT_PIN, 0);
 
         // Deinit camera
         esp_camera_deinit();
