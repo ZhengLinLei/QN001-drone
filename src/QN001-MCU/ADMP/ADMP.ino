@@ -1,124 +1,59 @@
 #include <SoftwareSerial.h>
-#include <ArduinoJson.h>
 
-SoftwareSerial ESP8266(D9, D10); // RX, TX
-SoftwareSerial UART(D6, D3);     // RX, TX
-
-const char *ssid     = "Oroneta_Network";
-const char *password = "LinEsElMasGuapo";
-const char *host     = "192.168.0.1";
-
-
-const int buzzer =  D11;
-const int batt   =  A0;
+// Configura los pines RX y TX para la comunicación con el ESP8266
+SoftwareSerial esp8266(9, 10); // RX, TX
 
 void setup() {
-    pinMode(buzzer, OUTPUT);
-    Serial.begin(9600);
-    ESP8266.begin(9600);
-    UART.begin(9600);
+  // Inicia el monitor serial
+  Serial.begin(9600);
+  
+  // Inicia la comunicación con el ESP8266
+  esp8266.begin(9600);
 
-    ESP8266.println("AT+RST");
-    delay(1000);
+  Serial.println("Restart");
 
-    if (ESP8266.find("OK"))
-        Serial.println("Module Reset");
+  // Conéctate a la red WiFi
+  esp8266.println("AT+CWJAP=\"JM_limpia_el_baño\",\"LaTienesEnElRouter\"");
+  delay(2000);
 
-    ESP8266.println("AT+CWMODE=1");
-    delay(1000);
+  // Lee la respuesta del ESP8266
+  while(1) {
+    Serial.print(".");
+    while (esp8266.available()) {
+      String respuesta = esp8266.readString();
+      Serial.println(respuesta);
 
-    String cmd = "AT+CWJAP=\"";
-    cmd += ssid;
-    cmd += "\",\"";
-    cmd += password;
-    cmd += "\"";
-    ESP8266.println(cmd);
-    delay(5000);
-
-    if (ESP8266.find("OK"))
-        Serial.println("Connected!");
-    else {
-        Serial.println("Not connected!");
-        return;
+      // Comprueba si la conexión fue exitosa
+      if (respuesta.indexOf("WIFI CONNECTED") != -1) {
+        Serial.println("Conexión exitosa a la red WiFi.");
+      } else if (respuesta.indexOf("WIFI DISCONNECT") != -1) {
+        Serial.println("No se pudo conectar a la red WiFi.");
+      }
     }
+    delay(100);
+  }
 
-    // Send wifi command
-    String ssid_pass = ssid + ";" + password + ";";
-    int len = ssid_pass.length();
+  // Configura la conexión como una única conexión
+  esp8266.println("AT+CIPMUX=0");
+  delay(2000);
 
-    // 6 digit length fill with 0
-    char str[7];
-    sprintf(str, "%06d", len);
+  // Conéctate al servidor web
+  esp8266.println("AT+CIPSTART=\"TCP\",\"www.tuweb.com\",80");
+  delay(2000);
 
-    UART.println("0000"+str+ssid_pass);
-    // Send wake command
-    UART.println("00010000040;0;");
+  // Envía una solicitud GET
+  esp8266.println("AT+CIPSEND=51");
+  delay(2000);
+  esp8266.println("GET / HTTP/1.1\r\nHost: www.tuweb.com\r\n\r\n");
+  delay(2000);
 
-    // Get camera server
-    String cmd = "AT+CIPSTART=\"TCP\",\"";
-    cmd += host;
-    cmd += "\",60002";
-    ESP8266.println(cmd);
-
-    if (ESP8266.find("OK")) {
-        cmd = "AT+CIPSEND=";
-        cmd += url.length();
-        ESP8266.println(cmd);
-
-        if (ESP8266.find(">")) {
-            ESP8266.print(url);
-            ESP8266.println("AT+CIPCLOSE");
-        }
-    }
-
-    delay(1000);
-
-    while (ESP8266.available()) {
-        String line = ESP8266.readStringUntil('\r');
-        UART.println(line);
-    }
-
-    tone(buzzer, 1000); // Send 1KHz sound signal...
-    delay(1000);        // ...for 1 sec
-    noTone(buzzer);     // Stop sound...
-    delay(1000);        // ...for 1sec
-
-
+  Serial.println("Web");
 }
 
 void loop() {
-    float voltage = analogRead(A6) * (4.92 / 1023.0);
-    float gps = {
-            39.455109,
-            -0.318429
-    };
-    float altitude = 11.1;
-    float speed = 0;
-    int mode = 0;
-    int mission = 0;
-
-    JsonDocument doc;
-    doc["dic"] = "0";
-    doc["key"] = "0";
-    doc["voltage"] = voltage;
-    doc["gps"] = gps;
-    doc["altitude"] = altitude;
-    doc["speed"] = speed;
-    doc["mode"] = mode;
-    doc["mission"] = mission;
-
-
-    // Generate message
-    String msg = "AT+SEND=";
-    msg = serializeJson(doc, msg);
-
-    // Send message
-    ESP8266.println(msg);
-
-    // Wait for response
-    while (ESP8266.available()) {
-        String line = ESP8266.readStringUntil('\r');
-    }
-
-    delay(1000);
+  // Si hay datos disponibles desde el ESP8266
+  if (esp8266.available()) {
+    // Imprime los datos en el monitor serial
+    Serial.write(esp8266.read());
+  }
 }
