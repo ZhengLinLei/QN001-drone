@@ -22,7 +22,7 @@
 #define DRONE_INFO         "0001000020ESP00002-123-0033;1;"
 
 #define UART_NUM_0          UART_NUM_0
-#define UART_BAUDRATE       9600
+#define UART_BAUDRATE       115200
 #define UART_BUFFER_SIZE    1024
 
 #define SERVER_IP           "156.67.26.182"
@@ -32,6 +32,8 @@
 #define WIFI_PASS           "password123"
 
 #define DATA_MAX_SIZE       500
+
+#define TIMEOUT_MILLIS      10000
 
 
 // ---------------------
@@ -58,6 +60,28 @@ int checkResponse(String response) {
     }
 }
 
+
+String getRespose() {
+    // Wait until get response or timeout
+    unsigned long start = millis();
+    while (!esp32.available()) { // ESP32
+        if (millis() - start > TIMEOUT_MILLIS) {
+            return "Timeout";
+        }
+
+        delay(100);
+        if (esp32.available()) { // ESP32
+            break;
+        }
+
+    }
+ESP00002-123-0033;1;
+    // Receive data
+    String response = esp32.readString(); // ESP32
+
+    return response;
+}
+
 void setup() {
     char data[DATA_MAX_SIZE];
     int iRet;
@@ -65,19 +89,26 @@ void setup() {
 
 
     esp32.begin(UART_BAUDRATE);
+    Serial.begin(UART_BAUDRATE);
 
     // Send 0000${LENGTH}${SSID};${PASS};
     do {
         memset(data, '\0', DATA_MAX_SIZE);
         sprintf(data, "%s%06d%s;%s;", CODE_WIFI, sizeof(WIFI_SSID) + sizeof(WIFI_PASS) + 2, WIFI_SSID, WIFI_PASS);
-        esp32.println(data);
+        esp32.print(data); // ESP32
+        Serial.println(String("WIFI ") + data);
 
         delay(200);
 
         // Check data received
-        while (esp32.available()) {
-            response = esp32.readString();
-            Serial.println(response);
+        String response = getRespose();
+        Serial.println(String("WIFI R ") + response);
+
+        // Check if timeout send 0002 and reset
+        if (response == "Timeout") {
+            esp32.print(CODE_END); // ESP32
+            delay(200);
+            resetFunc();
         }
     }
     while (checkResponse(response) == 1);
@@ -85,13 +116,19 @@ void setup() {
 
     // Send 0001000020ESP00002-123-0033;1;
     do {
-        esp32.println();
+        esp32.print(DRONE_INFO); // ESP32
+        Serial.println(String("DIC ") + DRONE_INFO);
         delay(200);
 
-        // Check data received
-        while (esp32.available()) {
-            response = esp32.readString();
-            Serial.println(response);
+        /// Check data received
+        String response = getRespose();
+        Serial.println(String("DIC R ") + response);
+
+        // Check if timeout send 0002 and reset
+        if (response == "Timeout") {
+            esp32.print(CODE_END); // ESP32
+            delay(200);
+            resetFunc();
         }
     }
     while (checkResponse(response) == 1);
@@ -100,16 +137,23 @@ void setup() {
     do {
         memset(data, '\0', DATA_MAX_SIZE);
         sprintf(data, "%s%06d%s;%s;", CODE_SERVER, sizeof(SERVER_IP) + sizeof(SERVER_PORT) + 2, SERVER_IP, SERVER_PORT);
-        esp32.println(data);
+        esp32.print(data); // ESP32
+        Serial.println(String("SERVER ") + data);
 
         delay(200);
 
-        // Check data received
-        while (esp32.available()) {
-            response = esp32.readString();
-            Serial.println(response);
+        /// Check data received
+        String response = getRespose();
+        Serial.println(String("SERVER R ") + response);
+
+        // Check if timeout send 0002 and reset
+        if (response == "Timeout") {
+            esp32.print(CODE_END); // ESP32
+            delay(200);
+            resetFunc();
         }
     }
+    while (checkResponse(response) == 1);
 
 }
 
@@ -125,5 +169,5 @@ void loop() {
             resetFunc();
         }
     }
-    sleep(100);
+    delay(100);
 }
