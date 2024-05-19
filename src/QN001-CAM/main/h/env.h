@@ -12,7 +12,7 @@
 #ifndef _ENV_H_
 #define _ENV_H_
 
-#define VERBOSE             1
+// #define VERBOSE             1
 
 #define ESP32_MODEL         "ESP32S CAM"
 
